@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>AI Web Search — akelakela</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:24px}
+    input[type=text]{width:60%;padding:8px}
+    button{padding:8px 12px;margin-left:8px}
+    .result{padding:12px;border-bottom:1px solid #eee}
+    .title{font-weight:600}
+    .snippet{color:#444;margin-top:6px}
+    .meta{color:#666;font-size:12px;margin-top:6px}
+  </style>
+</head>
+<body>
+  <h1>AI Web Search</h1>
+  <p>Search the web for AI-related content (powered by a search API).</p>
+  <div>
+    <input id="q" type="text" placeholder="Search query (e.g. 'transformer architectures 2026')" />
+    <button id="search">Search</button>
+  </div>
+  <div style="margin-top:12px">
+    <label><input type="checkbox" id="newsOnly" /> News only</label>
+  </div>
+  <div id="results" style="margin-top:20px"></div>
+
+  <script>
+    async function doSearch() {
+      const q = document.getElementById('q').value.trim();
+      const newsOnly = document.getElementById('newsOnly').checked;
+      if (!q) return;
+      const resultsEl = document.getElementById('results');
+      resultsEl.innerHTML = 'Searching…';
+      try {
+        const resp = await fetch('/api/search', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({q, newsOnly})
+        });
+        const payload = await resp.json();
+        if (!resp.ok) throw new Error(payload.error || 'Search failed');
+        if (!payload.results || payload.results.length === 0) {
+          resultsEl.innerHTML = '<p>No results</p>';
+          return;
+        }
+        resultsEl.innerHTML = payload.results.map(r => `
+          <div class="result">
+            <div class="title"><a href="${r.link}" target="_blank" rel="noopener">${r.title}</a></div>
+            <div class="snippet">${r.snippet || ''}</div>
+            <div class="meta">${r.source || ''} — ${r.displayed_at || ''}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        resultsEl.innerHTML = '<p style="color:red">' + (err.message || 'Error') + '</p>';
+      }
+    }
+    document.getElementById('search').addEventListener('click', doSearch);
+    document.getElementById('q').addEventListener('keypress', e => { if (e.key === 'Enter') doSearch(); });
+  </script>
+</body>
+</html>
